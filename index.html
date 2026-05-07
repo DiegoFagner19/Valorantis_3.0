@@ -6,8 +6,12 @@ import os
 import time
 from datetime import datetime, timedelta
 import threading
+from threading import Thread
+from flask import Flask
 
+# TOKEN para o Render (Variável de Ambiente)
 TOKEN = os.getenv("TOKEN")
+
 bot = telebot.TeleBot(TOKEN)
 ARQUIVO_SALVOS = "jogadores.json"
 ARQUIVO_GUILDAS = "guildas.json"
