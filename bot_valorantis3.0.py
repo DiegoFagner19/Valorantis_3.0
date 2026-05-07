@@ -1,0 +1,1604 @@
+import telebot
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
+import random
+import json
+import os
+import time
+from datetime import datetime, timedelta
+import threading
+from threading import Thread
+from flask import Flask
+
+# TOKEN para o Render (Variável de Ambiente)
+TOKEN = os.getenv("TOKEN")
+
+bot = telebot.TeleBot(TOKEN)
+ARQUIVO_SALVOS = "jogadores.json"
+ARQUIVO_GUILDAS = "guildas.json"
+
+# ========== URLS DAS IMAGENS ==========
+IMAGENS = {
+    "banner": "https://i.postimg.cc/9fNMRD1X/12030334-A2BA-4E85-BAC6-7820BE079440.png",
+    "guerreiro": "https://i.postimg.cc/VLkR1MxF/IMG-3309.png",
+    "elfa": "https://i.postimg.cc/MHSzVzSJ/IMG-3308.png",
+    "ladino": "https://i.postimg.cc/nLdxRNDf/87D2F92A-1868-451B-B737-152523585E7E.png",
+    "mago": "https://i.postimg.cc/668Z0Xvs/7D56ED85-E093-449E-8887-751825E5EA83.png",
+    "mapa_bosque": "https://i.postimg.cc/Bnbf8Mzz/IMG-3533.jpg",
+    "mapa_montanha": "https://i.postimg.cc/fLTcZSyc/0A477935-32F6-4A91-ACA6-A1FDE6733083.png",
+    "mapa_ruinas": "https://i.postimg.cc/wMDLQXbF/B0DE754B-3769-49E6-AF97-29F0828284AC.png",
+    "mapa_masmorra": "https://i.postimg.cc/Dz8TJBSZ/584F5DE6-21DD-4A9D-82BC-D8042B8533F1.png",
+    "mapa_vulcao": "https://i.postimg.cc/s2Fc72XS/IMG-3549.jpg",
+    "mapa_cidadela": "https://i.postimg.cc/tCC45dfd/4CCB8C75-4CFF-40E2-830B-416CEF434923.png",
+    "mapa_floresta": "https://i.postimg.cc/wMQCVkTP/baixados-(2).jpg",
+    "mapa_cimiterio": "https://i.postimg.cc/htzC4rWk/Pere-Lachaise-Cemetery-Sylvain-Sarrailh.jpg",
+    "inimigo_lobo": "https://i.postimg.cc/6QVkgg2m/FAB89BA5-2D43-4F87-ABAB-8D5A5C9EAA24.png",
+    "inimigo_dragao": "https://i.postimg.cc/d1wY0wc9/IMG-3541.jpg",
+    "inimigo_esqueleto": "https://i.postimg.cc/hGKyzjhG/IMG-3543.jpg",
+    "inimigo_zumbi": "https://i.postimg.cc/1XYX6fyM/824838E3-6E00-49F6-8CA1-D69A31026A67.png",
+    "inimigo_demonio": "https://i.postimg.cc/8CV5h8VC/IMG-3545.jpg",
+    "inimigo_cavaleiro_sombrio": "https://i.postimg.cc/7h2qc9mN/Chat-GPT-Image-4-de-mai-de-2026-13-41-17.png",
+    "inimigo_urso_selvagem": "https://i.postimg.cc/JhPHqk3K/Chat-GPT-Image-4-de-mai-de-2026-17-22-45.png",
+    "inimigo_aranha": "https://i.postimg.cc/bvTV93Bf/Chat-GPT-Image-4-de-mai-de-2026-17-26-14.png",
+    "inimigo_sapo_tres_olhos": "https://i.postimg.cc/RFqr3kZv/Chat-GPT-Image-4-de-mai-de-2026-18-32-47.png",
+    "inimigo_duende_selvagem": "https://i.postimg.cc/NFG1k69r/Chat-GPT-Image-4-de-mai-de-2026-18-33-55.png",
+    "inimigo_troll_selvagem": "https://i.postimg.cc/rs0K9ZQk/Chat-GPT-Image-4-de-mai-de-2026-18-44-40.png",
+    "inimigo_troll": "https://i.postimg.cc/wTNVVgfL/Chat-GPT-Image-4-de-mai-de-2026-18-45-50.png",
+    "inimigo_mostro": "https://i.postimg.cc/sgZt7kSY/Chat-GPT-Image-4-de-mai-de-2026-18-56-32.png",
+    "inimigo_espirito_bosque": "https://i.postimg.cc/Kvh9C1gN/Chat-GPT-Image-4-de-mai-de-2026-18-58-02.png",
+    "inimigo_duende": "https://i.postimg.cc/9fZJQV9L/Chat-GPT-Image-4-de-mai-de-2026-17-24-19.png",
+    "pocao": "https://i.postimg.cc/J48qnNmD/IMG-3564.png",
+    "loja": "https://i.postimg.cc/7LHd2vkr/IMG-3561.png",
+    "espada": "https://i.postimg.cc/FRcyFRB7/IMG-3565.png",
+    "armadura": "https://i.postimg.cc/65BrwBLc/IMG-3563.png",
+    "arena": "https://i.postimg.cc/TYGGDK3X/Arena-em-Eterium-capital-de-Silvarion.jpg",
+    "evento": "https://i.postimg.cc/2SVtbYvc/baixados-(5).jpg",
+    "vip": "https://i.postimg.cc/59rL9M4x/baixados-(4).jpg",
+    "guilda_img": "https://i.postimg.cc/N0xRQ9FY/Gemini-Generated-Image-fkmo7afkmo7afkmo.png",
+    "recrutar_img": "https://i.postimg.cc/sDpYTNrL/baixados-(3).jpg",
+    "codigo": "https://i.postimg.cc/W440bpkG/Nemesis-Emblem.jpg",
+    "magia": "https://i.postimg.cc/J44SnyPQ/Chat-GPT-Image-4-de-mai-de-2026-20-33-03.png",
+    "comunidade": "https://i.postimg.cc/Wz6DfWQm/Chat-GPT-Image-4-de-mai-de-2026-20-50-35.png",
+}
+
+# ========== MAPAS EM ORDEM ==========
+MAPAS = [
+    {"id": 0, "nome": "🌲 BOSQUE", "imagem": "mapa_bosque", "nivel_min": 1},
+    {"id": 1, "nome": "🏛️ RUINAS", "imagem": "mapa_ruinas", "nivel_min": 8},
+    {"id": 2, "nome": "🏔️ MONTANHAS", "imagem": "mapa_montanha", "nivel_min": 15},
+    {"id": 3, "nome": "🌳 FLORESTA", "imagem": "mapa_floresta", "nivel_min": 22},
+    {"id": 4, "nome": "🏜️ VULCAO", "imagem": "mapa_vulcao", "nivel_min": 29},
+    {"id": 5, "nome": "⚰️ CEMITÉRIO", "imagem": "mapa_cimiterio", "nivel_min": 36},
+    {"id": 6, "nome": "🏰 CASTELO", "imagem": "mapa_cidadela", "nivel_min": 43},
+]
+
+# ========== CLASSES ==========
+CLASSES = {
+    "guerreiro": {"nome": "⚔️ GUERREIRO", "imagem": "guerreiro", "hp": 130, "atk": 14, "def": 9, "crit": 5, "agi": 2,
+                  "desc": "💪 Mestre das armas pesadas, resistente e imparável"},
+    "elfa": {"nome": "🏹 ELFA", "imagem": "elfa", "hp": 80, "atk": 15, "def": 5, "crit": 10, "agi": 8,
+             "desc": "🍃 Conectada com a natureza, precisão mortal"},
+    "ladino": {"nome": "🗡️ LADINO", "imagem": "ladino", "hp": 95, "atk": 15, "def": 6, "crit": 15, "agi": 12,
+               "desc": "🌙 Sombra sorrateira, ataques críticos"},
+    "mago": {"nome": "🔮 MAGO", "imagem": "mago", "hp": 70, "atk": 18, "def": 4, "crit": 12, "agi": 10,
+             "desc": "✨ Manipulador das artes arcanas"},
+}
+
+# ========== INIMIGOS ==========
+INIMIGOS_POR_MAPA = {
+    0: [  # BOSQUE - nível 1
+        {"nome": "🐺 Lobo Gigante", "imagem": "inimigo_lobo", "hp": 40, "atk": 8, "def": 2, "xp": 45, "ouro": 30,
+         "tipo": "comum"},
+        {"nome": "🐻 Urso Selvagem", "imagem": "inimigo_urso_selvagem", "hp": 60, "atk": 12, "def": 5, "xp": 70,
+         "ouro": 50, "tipo": "comum"},
+        {"nome": "🕷️ Aranha Gigante", "imagem": "inimigo_aranha", "hp": 90, "atk": 16, "def": 7, "xp": 100, "ouro": 70,
+         "tipo": "comum"},
+        {"nome": "🧝 Duende Travesso", "imagem": "inimigo_duende", "hp": 110, "atk": 18, "def": 9, "xp": 130, "ouro": 90,
+         "tipo": "raro"},
+        {"nome": "🐸 Sapo de Três Olhos", "imagem": "inimigo_sapo_tres_olhos", "hp": 130, "atk": 20, "def": 12,
+         "xp": 150, "ouro": 100, "tipo": "comum"},
+        {"nome": "🧙 Duende Selvagem", "imagem": "inimigo_duende_selvagem", "hp": 150, "atk": 22, "def": 14, "xp": 180,
+         "ouro": 110, "tipo": "epico"},
+        {"nome": "👹 Troll Selvagem", "imagem": "inimigo_troll_selvagem", "hp": 180, "atk": 26, "def": 16, "xp": 200,
+         "ouro": 120, "tipo": "epico"},
+        {"nome": "🧌 Troll da Montanha", "imagem": "inimigo_troll", "hp": 200, "atk": 28, "def": 18, "xp": 210,
+         "ouro": 130, "tipo": "raro"},
+        {"nome": "👾 Monstro do Bosque", "imagem": "inimigo_mostro", "hp": 240, "atk": 32, "def": 24, "xp": 230,
+         "ouro": 150, "tipo": "lendario"},
+        {"nome": "👻 Espírito do Bosque", "imagem": "inimigo_espirito_bosque", "hp": 280, "atk": 40, "def": 32,
+         "xp": 260, "ouro": 190, "tipo": "mitico"},
+    ],
+    1: [  # RUINAS - nível 8
+        {"nome": "🐉 Dragão Jovem", "imagem": "inimigo_dragao", "hp": 150, "atk": 22, "def": 10, "xp": 180, "ouro": 120,
+         "tipo": "epico"},
+        {"nome": "💀 Esqueleto Guerreiro", "imagem": "inimigo_esqueleto", "hp": 120, "atk": 18, "def": 8, "xp": 140,
+         "ouro": 90, "tipo": "raro"},
+    ],
+    2: [  # MONTANHAS - nível 15
+        {"nome": "👹 Demônio das Montanhas", "imagem": "inimigo_demonio", "hp": 200, "atk": 28, "def": 15, "xp": 250,
+         "ouro": 180, "tipo": "lendario"},
+        {"nome": "🧌 Troll de Gelo", "imagem": "inimigo_troll", "hp": 180, "atk": 24, "def": 12, "xp": 200, "ouro": 140,
+         "tipo": "raro"},
+    ],
+    3: [  # FLORESTA - nível 22
+        {"nome": "🐉 Dragão Ancestral", "imagem": "inimigo_dragao", "hp": 300, "atk": 35, "def": 20, "xp": 400,
+         "ouro": 300, "tipo": "mitico"},
+        {"nome": "👻 Espírito da Floresta", "imagem": "inimigo_espirito_bosque", "hp": 250, "atk": 30, "def": 18,
+         "xp": 320, "ouro": 220, "tipo": "lendario"},
+    ],
+    4: [  # VULCAO - nível 29
+        {"nome": "⚔️ Cavaleiro Sombrio", "imagem": "inimigo_cavaleiro_sombrio", "hp": 400, "atk": 45, "def": 30,
+         "xp": 500, "ouro": 300, "tipo": "lendario"},
+        {"nome": "🐉 Dragão de Fogo", "imagem": "inimigo_dragao", "hp": 350, "atk": 40, "def": 25, "xp": 450,
+         "ouro": 280, "tipo": "epico"},
+    ],
+    5: [  # CEMITERIO - nível 36
+        {"nome": "⚔️ Cavaleiro Sombrio", "imagem": "inimigo_cavaleiro_sombrio", "hp": 400, "atk": 45, "def": 30,
+         "xp": 500, "ouro": 300, "tipo": "lendario"},
+        {"nome": "💀 Esqueleto Rei", "imagem": "inimigo_esqueleto", "hp": 350, "atk": 38, "def": 22, "xp": 420,
+         "ouro": 250, "tipo": "epico"},
+        {"nome": "👻 Espectro Maldito", "imagem": "inimigo_espirito_bosque", "hp": 300, "atk": 35, "def": 20, "xp": 380,
+         "ouro": 200, "tipo": "raro"},
+    ],
+    6: [  # CASTELO - nível 43
+        {"nome": "👹 Rei Demônio", "imagem": "inimigo_demonio", "hp": 500, "atk": 55, "def": 35, "xp": 700, "ouro": 500,
+         "tipo": "mitico"},
+        {"nome": "🐉 Dragão Ancient", "imagem": "inimigo_dragao", "hp": 450, "atk": 50, "def": 30, "xp": 600,
+         "ouro": 400, "tipo": "lendario"},
+        {"nome": "⚔️ Cavaleiro da Morte", "imagem": "inimigo_cavaleiro_sombrio", "hp": 480, "atk": 52, "def": 32,
+         "xp": 650, "ouro": 450, "tipo": "epico"},
+    ],
+}
+
+# ========== CONQUISTAS ==========
+CONQUISTAS = {
+    "primeiro_kill": {"nome": "🏆 Primeiro Sangue", "desc": "Mate seu primeiro inimigo", "recompensa": 50},
+    "10_kills": {"nome": "🏆 Aprendiz", "desc": "Mate 10 inimigos", "recompensa": 100},
+    "50_kills": {"nome": "🏆 Experiente", "desc": "Mate 50 inimigos", "recompensa": 300},
+    "100_kills": {"nome": "🏆 Mestre", "desc": "Mate 100 inimigos", "recompensa": 500},
+    "200_kills": {"nome": "🏆 Lendário", "desc": "Mate 200 inimigos", "recompensa": 800},
+    "500_kills": {"nome": "🏆 Imortal", "desc": "Mate 500 inimigos", "recompensa": 1500},
+    "nivel_5": {"nome": "🏆 Aventureiro", "desc": "Atinga o nível 5", "recompensa": 200},
+    "nivel_10": {"nome": "🏆 Herói", "desc": "Atinga o nível 10", "recompensa": 500},
+    "nivel_20": {"nome": "🏆 Lenda", "desc": "Atinga o nível 20", "recompensa": 1000},
+    "nivel_30": {"nome": "🏆 Mito", "desc": "Atinga o nível 30", "recompensa": 2000},
+}
+
+# ========== ITENS ==========
+ITENS_LOJA = [
+    {"id": 1, "nome": "⚔️ Espada de Ferro", "preco": 200, "atk": 8, "tipo": "arma"},
+    {"id": 2, "nome": "🛡️ Escudo de Ferro", "preco": 180, "def": 6, "tipo": "armadura"},
+    {"id": 3, "nome": "💍 Anel de CRIT", "preco": 150, "crit": 8, "tipo": "amuleto"},
+    {"id": 4, "nome": "💊 Poção de Vida", "preco": 30, "cura": 50, "tipo": "consumivel"},
+    {"id": 5, "nome": "👑 Coroa Real", "preco": 500, "hp": 50, "tipo": "armadura"},
+    {"id": 6, "nome": "⚔️ Espada Lendária", "preco": 1000, "atk": 20, "tipo": "arma"},
+]
+
+ITENS_ANDARILHO = [
+    {"id": 7, "nome": "🔮 Pedra Mística", "preco": 150, "bonus": "Usar para +50 XP"},
+    {"id": 8, "nome": "🍀 Trevo da Sorte", "preco": 200, "bonus": "Item raro colecionável"},
+    {"id": 9, "nome": "📜 Pergaminho Antigo", "preco": 100, "bonus": "Revela um código secreto"},
+    {"id": 10, "nome": "🐉 Escama de Dragão", "preco": 500, "bonus": "Item lendário"},
+    {"id": 11, "nome": "💎 Joia da Alma", "preco": 1000, "bonus": "Usar para +200 XP"},
+    {"id": 12, "nome": "🔑 Chave Mestra", "preco": 300, "bonus": "Abre portas secretas"},
+]
+
+ITENS_FERREIRO = [
+    {"id": 13, "nome": "⚔️ Espada de Aço", "preco": 300, "atk": 12, "tipo": "arma", "nivel": 5},
+    {"id": 14, "nome": "🛡️ Escudo Pesado", "preco": 250, "def": 10, "tipo": "armadura", "nivel": 5},
+    {"id": 15, "nome": "⚔️ Espada de Titânio", "preco": 800, "atk": 25, "tipo": "arma", "nivel": 15},
+    {"id": 16, "nome": "🛡️ Escudo Épico", "preco": 600, "def": 20, "tipo": "armadura", "nivel": 15},
+    {"id": 17, "nome": "💍 Anel do Dragão", "preco": 1000, "crit": 20, "tipo": "amuleto", "nivel": 20},
+]
+
+# ========== EVENTOS ==========
+EVENTOS = {
+    "invasao": {"ativo": True, "bonus_xp": 50, "bonus_ouro": 50},
+    "boss": {"ativo": True, "boss_hp": 1000, "boss_atual": 1000}
+}
+
+# ========== MAGIAS ==========
+MAGIAS_LISTA = ["🔥 Bola de Fogo", "❄️ Congelamento", "⚡ Raio Arcano", "💚 Cura Divina", "🌪️ Tornado", "🛡️ Escudo Mágico"]
+
+
+# ========== FUNÇÕES ==========
+def carregar_jogadores():
+    if os.path.exists(ARQUIVO_SALVOS):
+        try:
+            with open(ARQUIVO_SALVOS, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+
+def salvar_jogadores(dados):
+    with open(ARQUIVO_SALVOS, 'w', encoding='utf-8') as f:
+        json.dump(dados, f, ensure_ascii=False, indent=2)
+
+
+def criar_jogador(user_id, nome, classe):
+    c = CLASSES[classe]
+    agora = time.time()
+    return {
+        "nome": nome, "classe": classe, "lvl": 1, "xp": 0,
+        "hp": c["hp"], "max_hp": c["hp"],
+        "energia": 20, "max_energia": 20, "ultima_energia": agora,
+        "atk_base": c["atk"], "def_base": c["def"], "crit_base": c["crit"], "agi_base": c["agi"],
+        "ouro": 100, "pixels": 0, "honra": 0, "vitorias": 0, "derrotas": 0, "ac_diario": 0,
+        "kills": 0, "kills_diario": 0, "xp_diario": 0,
+        "mapa_atual": 0, "guilda": None,
+        "pocoes": 3, "chaves_masmorra": 0, "pocoes_mana": 2,
+        "login_diario": 1, "ultimo_login": agora, "login_recebido": False,
+        "recrutados": [],
+        "inventario": {"espada": False, "armadura": False, "amuleto": False},
+        "inventario_items": [],
+        "conquistas": [],
+        "magias": [],
+        "vip": {"ativo": False, "dias_restantes": 0},
+        "som": True,
+        "missoes_diarias": {"matar": 0, "matar_raro": 0, "ganhar_xp": 0},
+        "andarilho_comprado": False,
+        "andarilho_item": None,
+        "codigos_usados": []
+    }
+
+
+def recuperar_energia(j):
+    agora = time.time()
+    diff = agora - j.get("ultima_energia", agora)
+    ganho = int(diff // 720)
+    if ganho > 0:
+        j["energia"] = min(j["max_energia"], j["energia"] + ganho)
+        j["ultima_energia"] = agora
+    return j["energia"]
+
+
+def get_atk(j):
+    bonus = 5 if j.get("inventario", {}).get("espada", False) else 0
+    if j.get("vip", {}).get("ativo", False):
+        bonus += 5
+    return j.get("atk_base", 10) + bonus
+
+
+def get_def(j):
+    bonus = 3 if j.get("inventario", {}).get("armadura", False) else 0
+    if j.get("vip", {}).get("ativo", False):
+        bonus += 3
+    return j.get("def_base", 5) + bonus
+
+
+def get_crit(j):
+    bonus = 5 if j.get("inventario", {}).get("amuleto", False) else 0
+    if j.get("vip", {}).get("ativo", False):
+        bonus += 5
+    return j.get("crit_base", 5) + bonus
+
+
+def get_relogio():
+    return datetime.now().strftime("%H:%M:%S")
+
+
+def get_barra_hp(hp, max_hp):
+    percent = hp / max_hp if max_hp > 0 else 1
+    if percent <= 0.25:
+        cor = "🔴"
+    elif percent <= 0.5:
+        cor = "🟠"
+    else:
+        cor = "🟢"
+    barra = "█" * int(percent * 15) + "░" * (15 - int(percent * 15))
+    return f"{cor} ❤️ [{barra}] {hp}/{max_hp}"
+
+
+def get_barra_energia(energia, max_energia):
+    percent = energia / max_energia if max_energia > 0 else 1
+    if percent <= 0.25:
+        cor = "🔴"
+    elif percent <= 0.5:
+        cor = "🟠"
+    else:
+        cor = "🟢"
+    barra = "⚡" * int(percent * 10) + "·" * (10 - int(percent * 10))
+    return f"{cor} ⚡ [{barra}] {energia}/{max_energia}"
+
+
+def verificar_conquistas(j):
+    novas = []
+    kills = j.get("kills", 0)
+    lvl = j.get("lvl", 1)
+
+    conquistas_check = [
+        ("primeiro_kill", kills >= 1), ("10_kills", kills >= 10), ("50_kills", kills >= 50),
+        ("100_kills", kills >= 100), ("200_kills", kills >= 200), ("500_kills", kills >= 500),
+        ("nivel_5", lvl >= 5), ("nivel_10", lvl >= 10), ("nivel_20", lvl >= 20), ("nivel_30", lvl >= 30)
+    ]
+
+    for chave, condicao in conquistas_check:
+        if chave not in j.get("conquistas", []) and condicao:
+            novas.append(chave)
+
+    for c in novas:
+        j.setdefault("conquistas", []).append(c)
+        j["ouro"] += CONQUISTAS[c]["recompensa"]
+        j["xp"] += CONQUISTAS[c]["recompensa"]
+    return novas
+
+
+def formatar_status(j):
+    recuperar_energia(j)
+    verificar_conquistas(j)
+    c = CLASSES.get(j["classe"], CLASSES["guerreiro"])
+    mapa = MAPAS[min(j.get("mapa_atual", 0), len(MAPAS) - 1)]
+    xp_necessario = j["lvl"] * 100
+    xp_percent = int((j["xp"] / xp_necessario) * 100) if xp_necessario > 0 else 0
+    tempo = 720 - (time.time() - j.get("ultima_energia", time.time())) % 720
+    minutos, segundos = int(tempo // 60), int(tempo % 60)
+    vip = "⭐ VIP" if j.get("vip", {}).get("ativo", False) else ""
+
+    texto = f"""
+🕐 *{get_relogio()}* {vip}
+
+╔══════════════════════════════════════╗
+║ {c['nome']} {j['nome']} - Nível {j['lvl']}
+║ {c['desc']}
+╠══════════════════════════════════════╣
+║ {get_barra_hp(j['hp'], j['max_hp'])}
+║ {get_barra_energia(j['energia'], j['max_energia'])} ({minutos}m {segundos}s)
+║ ✨ XP: {j['xp']}/{xp_necessario} ({xp_percent}%)
+╠══════════════════════════════════════╣
+║ ⚔️ ATK: {get_atk(j)}  🛡️ DEF: {get_def(j)}
+║ 🎯 CRIT: {get_crit(j)}%  🌙 AGI: {j.get('agi_base', 5)}
+╠══════════════════════════════════════╣
+║ 💰 Ouro: {j['ouro']}  🎮 Pixels: {j['pixels']}
+║ 🏆 Kills: {j['kills']}  💀 Derrotas: {j.get('derrotas', 0)}
+║ 🗝️ Chaves: {j.get('chaves_masmorra', 0)}  💊 Poções: {j.get('pocoes', 0)}
+╠══════════════════════════════════════╣
+║ 🗺️ {mapa['nome']} (Nv.{mapa['nivel_min']}+)
+║ 🏰 Guilda: {j.get('guilda', 'Nenhuma')}
+║ 📅 Login: Dia {j.get('login_diario', 1)}/7
+║ 🏆 Conquistas: {len(j.get('conquistas', []))}/{len(CONQUISTAS)}
+╚══════════════════════════════════════╝
+"""
+    return texto
+
+
+def spawn_inimigo(j):
+    mapa_id = j.get("mapa_atual", 0)
+    inimigos = INIMIGOS_POR_MAPA.get(mapa_id, INIMIGOS_POR_MAPA[0])
+    e = random.choice(inimigos)
+    mult = 1 + (j["lvl"] * 0.08)
+    return {
+        "nome": e["nome"], "imagem": e["imagem"], "tipo": e["tipo"],
+        "hp": int(e["hp"] * mult), "max_hp": int(e["hp"] * mult),
+        "atk": int(e["atk"] + j["lvl"] * 0.8),
+        "def": int(e["def"] + j["lvl"] * 0.5),
+        "xp": int(e["xp"] + j["lvl"] * 5),
+        "ouro": int(e["ouro"] + j["lvl"] * 3)
+    }
+
+
+# ========== MENUS ==========
+def menu_principal():
+    mk = InlineKeyboardMarkup(row_width=3)
+    mk.add(
+        InlineKeyboardButton("👥 Comunidade", callback_data="comunidade"),
+        InlineKeyboardButton("⚔️ CAÇAR", callback_data="cacar"),
+        InlineKeyboardButton("👤 STATUS", callback_data="status"),
+        InlineKeyboardButton("🏆 Conquistas", callback_data="conquistas"),
+        InlineKeyboardButton("🔮 Magias", callback_data="magias"),
+        InlineKeyboardButton("🎒 Inventário", callback_data="inventario"),
+        InlineKeyboardButton("🔄 Trocar Classe", callback_data="trocar_classe"),
+        InlineKeyboardButton("🗺️ MAPAS", callback_data="mapas"),
+        InlineKeyboardButton("⛓️ MASMORRA", callback_data="masmorra"),
+        InlineKeyboardButton("💰 COMÉRCIO", callback_data="comercio"),
+        InlineKeyboardButton("🏆 ARENA", callback_data="arena"),
+        InlineKeyboardButton("📊 RANKING", callback_data="ranking"),
+        InlineKeyboardButton("🎉 EVENTOS", callback_data="eventos"),
+        InlineKeyboardButton("⚡ ENERGIA", callback_data="energia"),
+        InlineKeyboardButton("📋 ATIVIDADES", callback_data="atividades"),
+        InlineKeyboardButton("🏰 GUILDA", callback_data="guilda"),
+        InlineKeyboardButton("🎁 CÓDIGOS", callback_data="codigos"),
+        InlineKeyboardButton("⭐ VIP", callback_data="vip"),
+        InlineKeyboardButton("👥 RECRUTAR", callback_data="recrutar"),
+        InlineKeyboardButton("🔊 SOM", callback_data="som")
+    )
+    return mk
+
+
+def menu_batalha():
+    mk = InlineKeyboardMarkup(row_width=2)
+    mk.add(
+        InlineKeyboardButton("⚔️ ATACAR", callback_data="atacar"),
+        InlineKeyboardButton("💊 POÇÃO", callback_data="usar_pocao"),
+        InlineKeyboardButton("🏃 FUGIR", callback_data="fugir"),
+        InlineKeyboardButton("❌ SAIR", callback_data="sair_batalha")
+    )
+    return mk
+
+
+def menu_habilidades(j):
+    mk = InlineKeyboardMarkup(row_width=1)
+    habilidades = [
+        {"nome": "💪 Ataque Poderoso", "custo": 5, "dano": 30},
+        {"nome": "🛡️ Defesa Total", "custo": 5, "defesa": 15},
+        {"nome": "⚡ Golpe Rápido", "custo": 3, "dano": 20},
+        {"nome": "💚 Cura Rápida", "custo": 8, "cura": 40}
+    ]
+    for i, hab in enumerate(habilidades):
+        mk.add(InlineKeyboardButton(f"✨ {hab['nome']} ({hab['custo']}⚡)", callback_data=f"usar_habilidade_{i}"))
+    mk.add(InlineKeyboardButton("◀️ VOLTAR", callback_data="voltar_batalha"))
+    return mk
+
+
+# ========== COMANDOS ==========
+@bot.message_handler(commands=['start'])
+def start(msg):
+    uid = str(msg.chat.id)
+    dados = carregar_jogadores()
+
+    if uid in dados:
+        j = dados[uid]
+        texto = formatar_status(j)
+        img = IMAGENS.get(j.get("classe", "guerreiro"), IMAGENS["guerreiro"])
+        bot.send_photo(msg.chat.id, img, caption=texto, parse_mode="Markdown", reply_markup=menu_principal())
+    else:
+        if msg.text and "ref_" in msg.text:
+            ref_uid = msg.text.split("ref_")[1]
+            if ref_uid in dados and ref_uid != uid:
+                dados[ref_uid]["recrutados"].append(uid)
+                dados[ref_uid]["ouro"] += 200
+                dados[ref_uid]["pocoes"] += 5
+                salvar_jogadores(dados)
+
+        mk = InlineKeyboardMarkup(row_width=2)
+        for k, v in CLASSES.items():
+            mk.add(InlineKeyboardButton(f"{v['nome']}", callback_data=f"criar_{k}"))
+
+        bot.send_photo(msg.chat.id, IMAGENS["banner"],
+                       caption="🌟 *BEM-VINDO A VALORANTIS!*\n⚔️ Escolha sua classe! ⚔️",
+                       parse_mode="Markdown", reply_markup=mk)
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback(call):
+    uid = str(call.message.chat.id)
+    data = call.data
+    jogadores = carregar_jogadores()
+
+    if data.startswith("criar_"):
+        classe = data[6:]
+        if classe in CLASSES:
+            nome = call.from_user.first_name or "Aventureiro"
+            j = criar_jogador(uid, nome, classe)
+            jogadores[uid] = j
+            salvar_jogadores(jogadores)
+            texto = formatar_status(j)
+            img = IMAGENS[classe]
+            try:
+                bot.edit_message_media(InputMediaPhoto(img, caption=texto, parse_mode="Markdown"),
+                                       call.message.chat.id, call.message.id, reply_markup=menu_principal())
+            except:
+                bot.send_photo(call.message.chat.id, img, caption=texto, parse_mode="Markdown",
+                               reply_markup=menu_principal())
+        return
+
+    if uid not in jogadores:
+        bot.answer_callback_query(call.id, "Use /start primeiro!")
+        return
+
+    j = jogadores[uid]
+    recuperar_energia(j)
+
+    # STATUS
+    if data == "status":
+        texto = formatar_status(j)
+        try:
+            bot.edit_message_media(
+                InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+                call.message.chat.id, call.message.id, reply_markup=menu_principal())
+        except:
+            bot.send_photo(call.message.chat.id, IMAGENS[j.get("classe", "guerreiro")], caption=texto,
+                           parse_mode="Markdown", reply_markup=menu_principal())
+
+    # CONQUISTAS
+    elif data == "conquistas":
+        novas = verificar_conquistas(j)
+        salvar_jogadores(jogadores)
+        texto = "🏆 *CONQUISTAS* 🏆\n\n"
+        for chave, c in CONQUISTAS.items():
+            status = "✅" if chave in j.get("conquistas", []) else "❌"
+            texto += f"{status} {c['nome']}\n   {c['desc']} (+{c['recompensa']}💰)\n\n"
+        if novas:
+            texto += f"\n🎉 *NOVAS CONQUISTAS!* +{sum(CONQUISTAS[c]['recompensa'] for c in novas)}💰"
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["banner"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # MAGIAS
+    elif data == "magias":
+        texto = "🔮 *MAGIAS* 🔮\n\n"
+        for m in MAGIAS_LISTA:
+            if m in j.get("magias", []):
+                texto += f"✅ {m} - Aprendida\n"
+            else:
+                texto += f"📖 {m} - 100💰 para aprender\n"
+        mk = InlineKeyboardMarkup()
+        for m in MAGIAS_LISTA:
+            if m not in j.get("magias", []):
+                mk.add(InlineKeyboardButton(f"📖 Aprender {m} (100💰)", callback_data=f"aprender_magia_{m}"))
+        mk.add(InlineKeyboardButton("◀️ VOLTAR", callback_data="voltar"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["magia"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data.startswith("aprender_magia_"):
+        magia_nome = data.replace("aprender_magia_", "")
+        if j["ouro"] >= 100 and magia_nome not in j.get("magias", []):
+            j["ouro"] -= 100
+            j.setdefault("magias", []).append(magia_nome)
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, f"📖 Você aprendeu {magia_nome}!", show_alert=True)
+        elif magia_nome in j.get("magias", []):
+            bot.answer_callback_query(call.id, "❌ Você já aprendeu esta magia!", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, "❌ Ouro insuficiente!", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # INVENTÁRIO
+    elif data == "inventario":
+        texto = f"🎒 *INVENTÁRIO DE {j['nome']}* 🎒\n\n💊 Poções de Vida: {j.get('pocoes', 0)}\n🔮 Poções de Mana: {j.get('pocoes_mana', 0)}\n🗝️ Chaves de Masmorra: {j.get('chaves_masmorra', 0)}\n🎮 Pixels: {j.get('pixels', 0)}\n\n⚔️ Arma: {'Espada de Ferro (+8 ATK)' if j.get('inventario', {}).get('espada', False) else 'Espada Simples (+2 ATK)'}\n🛡️ Armadura: {'Armadura de Ferro (+6 DEF)' if j.get('inventario', {}).get('armadura', False) else 'Armadura Couro (+3 DEF)'}\n💍 Amuleto: {'Anel de CRIT (+8% CRIT)' if j.get('inventario', {}).get('amuleto', False) else 'Nenhum'}\n\n🎁 Itens Especiais: {', '.join(j.get('inventario_items', [])) if j.get('inventario_items') else 'Nenhum'}"
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["loja"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # TROCAR CLASSE
+    elif data == "trocar_classe":
+        mk = InlineKeyboardMarkup(row_width=2)
+        for k, v in CLASSES.items():
+            if k != j["classe"]:
+                mk.add(InlineKeyboardButton(f"{v['nome']} (1000💰)", callback_data=f"trocar_para_{k}"))
+        mk.add(InlineKeyboardButton("◀️ VOLTAR", callback_data="voltar"))
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS["banner"], caption="🔄 *TROCAR CLASSE* (1000💰)", parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data.startswith("trocar_para_"):
+        nova = data.split("_")[2]
+        if j["ouro"] >= 1000:
+            j["ouro"] -= 1000
+            c = CLASSES[nova]
+            j["classe"] = nova
+            j["max_hp"] = c["hp"]
+            j["hp"] = c["hp"]
+            j["atk_base"] = c["atk"]
+            j["def_base"] = c["def"]
+            j["crit_base"] = c["crit"]
+            j["agi_base"] = c["agi"]
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, f"✅ Você agora é {c['nome']}!", show_alert=True)
+            texto = formatar_status(j)
+            bot.edit_message_media(InputMediaPhoto(IMAGENS[nova], caption=texto, parse_mode="Markdown"),
+                                   call.message.chat.id, call.message.id, reply_markup=menu_principal())
+        else:
+            bot.answer_callback_query(call.id, "❌ Precisa de 1000💰!", show_alert=True)
+
+    # ENERGIA
+    elif data == "energia":
+        texto = f"⚡ *ENERGIA*\n\n{get_barra_energia(j['energia'], j['max_energia'])}\n\n🛌 Descanso (1⚡ = HP cheio)\n⚡ Recarga (3🎮 = +20⚡)"
+        mk = InlineKeyboardMarkup(row_width=2)
+        mk.add(InlineKeyboardButton("🛌 Descanso", callback_data="descanso"),
+               InlineKeyboardButton("⚡ Recarga (3🎮)", callback_data="recarga"),
+               InlineKeyboardButton("◀️ VOLTAR", callback_data="voltar"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["banner"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data == "descanso":
+        if j["energia"] > 0:
+            j["energia"] -= 1
+            j["hp"] = j["max_hp"]
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, "🛌 Descansou! HP cheio!", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, "❌ Sem energia!", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    elif data == "recarga":
+        if j["pixels"] >= 3:
+            j["pixels"] -= 3
+            j["energia"] = min(j["max_energia"], j["energia"] + 20)
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, "⚡ +20 energia!", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, f"❌ Precisa de 3🎮! (Você tem {j['pixels']})", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # MAPAS
+    elif data == "mapas":
+        mk = InlineKeyboardMarkup(row_width=1)
+        for m in MAPAS:
+            sel = "⭐ " if j.get("mapa_atual", 0) == m["id"] else ""
+            if j["lvl"] >= m["nivel_min"]:
+                mk.add(
+                    InlineKeyboardButton(f"{sel}{m['nome']} (Nv.{m['nivel_min']}+)", callback_data=f"mapa_{m['id']}"))
+            else:
+                mk.add(InlineKeyboardButton(f"🔒 {m['nome']} (Nv.{m['nivel_min']}+)", callback_data="mapa_bloqueado"))
+        mk.add(InlineKeyboardButton("◀️ VOLTAR", callback_data="voltar"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["mapa_bosque"], caption="🗺️ *MAPAS*", parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data == "mapa_bloqueado":
+        bot.answer_callback_query(call.id, "🔒 Nível insuficiente!", show_alert=True)
+
+    elif data.startswith("mapa_"):
+        mid = int(data.split("_")[1])
+        if j["lvl"] >= MAPAS[mid]["nivel_min"]:
+            j["mapa_atual"] = mid
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, f"🗺️ Viajou para {MAPAS[mid]['nome']}!", show_alert=True)
+            texto = formatar_status(j)
+            bot.edit_message_media(
+                InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+                call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # CAÇAR
+    elif data == "cacar":
+        if "inimigo" in j:
+            bot.answer_callback_query(call.id, "Já em batalha!")
+            return
+        if j["energia"] <= 0:
+            bot.answer_callback_query(call.id, "❌ Energia esgotada!", show_alert=True)
+            return
+        j["energia"] -= 1
+        inimigo = spawn_inimigo(j)
+        j["inimigo"] = inimigo
+        salvar_jogadores(jogadores)
+        texto = f"⚔️ *{inimigo['nome']}* apareceu!\n\n{get_barra_hp(inimigo['hp'], inimigo['max_hp'])}\n⚔️ ATK: {inimigo['atk']}\n💰 {inimigo['ouro']}💰 | ✨ {inimigo['xp']} XP"
+        img = IMAGENS.get(inimigo["imagem"], IMAGENS["inimigo_lobo"])
+        bot.edit_message_media(InputMediaPhoto(img, caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=menu_batalha())
+
+    # ATACAR
+    elif data == "atacar":
+        if "inimigo" not in j:
+            texto = formatar_status(j)
+            bot.edit_message_media(
+                InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+                call.message.chat.id, call.message.id, reply_markup=menu_principal())
+            return
+        ini = j["inimigo"]
+        dano = get_atk(j) + random.randint(5, 15)
+        if random.random() < (get_crit(j) / 100):
+            dano = int(dano * 2)
+            crit = " ⚡CRÍTICO!"
+        else:
+            crit = ""
+        dano = max(1, dano - ini["def"])
+        ini["hp"] -= dano
+
+        if ini["hp"] <= 0:
+            j["xp"] += ini["xp"]
+            j["ouro"] += ini["ouro"]
+            j["kills"] = j.get("kills", 0) + 1
+            j["kills_diario"] = j.get("kills_diario", 0) + 1
+            j["xp_diario"] = j.get("xp_diario", 0) + ini["xp"]
+
+            if ini.get("tipo") in ["raro", "epico", "lendario", "mitico"]:
+                j["missoes_diarias"]["matar_raro"] = j["missoes_diarias"].get("matar_raro", 0) + 1
+
+            if random.random() < 0.1:
+                j["pixels"] = j.get("pixels", 0) + 1
+                drop = "\n🎮 +1 Pixel!"
+            else:
+                drop = ""
+            if random.random() < 0.05:
+                j["chaves_masmorra"] = j.get("chaves_masmorra", 0) + 1
+                drop += "\n🗝️ +1 Chave de Masmorra!"
+
+            if j["xp"] >= j["lvl"] * 100:
+                j["lvl"] += 1
+                j["xp"] = 0
+                j["max_hp"] += 20
+                j["hp"] = j["max_hp"]
+                j["max_energia"] += 2
+                j["atk_base"] += 3
+                j["def_base"] += 2
+                msg_lvl = f"\n🎉 LEVEL UP! Nível {j['lvl']}!"
+            else:
+                msg_lvl = ""
+            del j["inimigo"]
+            salvar_jogadores(jogadores)
+            texto = f"⚔️ *VITÓRIA!*{crit}\n✨ +{ini['xp']} XP\n💰 +{ini['ouro']}💰{drop}{msg_lvl}\n\n{formatar_status(j)}"
+            bot.edit_message_media(
+                InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+                call.message.chat.id, call.message.id, reply_markup=menu_principal())
+            return
+
+        dano_i = max(1, ini["atk"] + random.randint(5, 12) - get_def(j))
+        j["hp"] -= dano_i
+        if j["hp"] <= 0:
+            j["derrotas"] = j.get("derrotas", 0) + 1
+            j["hp"] = j["max_hp"] // 2
+            del j["inimigo"]
+            salvar_jogadores(jogadores)
+            texto = f"💀 *DERROTA!*\n\n{formatar_status(j)}"
+            bot.edit_message_media(InputMediaPhoto(IMAGENS["banner"], caption=texto, parse_mode="Markdown"),
+                                   call.message.chat.id, call.message.id, reply_markup=menu_principal())
+            return
+        salvar_jogadores(jogadores)
+        texto = f"⚔️ Você causou {dano} de dano!{crit}\n💥 {ini['nome']} causou {dano_i}!\n\n{get_barra_hp(ini['hp'], ini['max_hp'])}\n\n{get_barra_hp(j['hp'], j['max_hp'])}"
+        img = IMAGENS.get(ini["imagem"], IMAGENS["inimigo_lobo"])
+        bot.edit_message_media(InputMediaPhoto(img, caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=menu_batalha())
+
+    # HABILIDADES
+    elif data == "habilidades_batalha":
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS["banner"], caption="✨ *ESCOLHA UMA HABILIDADE* ✨", parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_habilidades(j))
+
+    elif data.startswith("usar_habilidade_"):
+        if "inimigo" not in j:
+            bot.answer_callback_query(call.id, "Nenhum inimigo em batalha!")
+            return
+
+        idx = int(data.split("_")[2])
+        habilidades = [
+            {"nome": "💪 Ataque Poderoso", "custo": 5, "dano": 30},
+            {"nome": "🛡️ Defesa Total", "custo": 5, "defesa": 15},
+            {"nome": "⚡ Golpe Rápido", "custo": 3, "dano": 20},
+            {"nome": "💚 Cura Rápida", "custo": 8, "cura": 40}
+        ]
+        hab = habilidades[idx]
+
+        if j["energia"] < hab["custo"]:
+            bot.answer_callback_query(call.id, f"❌ Energia insuficiente! Precisa de {hab['custo']} energia.",
+                                      show_alert=True)
+            return
+
+        j["energia"] -= hab["custo"]
+        ini = j["inimigo"]
+        msg = f"✨ *{hab['nome']}* ✨\n"
+
+        if "dano" in hab:
+            dano = hab["dano"] + random.randint(5, 15)
+            dano = max(1, dano - ini["def"])
+            ini["hp"] -= dano
+            msg += f"⚔️ Causou {dano} de dano!"
+        elif "defesa" in hab:
+            if "buffs" not in j:
+                j["buffs"] = {}
+            j["buffs"]["def"] = hab["defesa"]
+            j["buffs"]["duracao"] = 3
+            msg += f"🛡️ Defesa +{hab['defesa']} por 3 turnos!"
+        elif "cura" in hab:
+            j["hp"] = min(j["max_hp"], j["hp"] + hab["cura"])
+            msg += f"💚 Curou {hab['cura']} de HP!"
+
+        if ini["hp"] <= 0:
+            j["xp"] += ini["xp"]
+            j["ouro"] += ini["ouro"]
+            j["kills"] = j.get("kills", 0) + 1
+            del j["inimigo"]
+            salvar_jogadores(jogadores)
+            msg += f"\n\n🏆 *VITÓRIA!*\n✨ +{ini['xp']} XP\n💰 +{ini['ouro']}💰\n\n{formatar_status(j)}"
+            bot.edit_message_media(
+                InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=msg, parse_mode="Markdown"),
+                call.message.chat.id, call.message.id, reply_markup=menu_principal())
+            return
+
+        dano_i = max(1, ini["atk"] + random.randint(5, 12) - get_def(j))
+        j["hp"] -= dano_i
+        if j["hp"] <= 0:
+            j["derrotas"] = j.get("derrotas", 0) + 1
+            j["hp"] = j["max_hp"] // 2
+            del j["inimigo"]
+            salvar_jogadores(jogadores)
+            msg += f"\n\n💀 *DERROTA!*\n\n{formatar_status(j)}"
+            bot.edit_message_media(InputMediaPhoto(IMAGENS["banner"], caption=msg, parse_mode="Markdown"),
+                                   call.message.chat.id, call.message.id, reply_markup=menu_principal())
+            return
+
+        salvar_jogadores(jogadores)
+        msg += f"\n💥 {ini['nome']} causou {dano_i} de dano!\n\n{get_barra_hp(ini['hp'], ini['max_hp'])}\n\n{get_barra_hp(j['hp'], j['max_hp'])}"
+        img = IMAGENS.get(ini["imagem"], IMAGENS["inimigo_lobo"])
+        bot.edit_message_media(InputMediaPhoto(img, caption=msg, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=menu_batalha())
+
+    elif data == "voltar_batalha":
+        if "inimigo" in j:
+            ini = j["inimigo"]
+            texto = f"⚔️ *{ini['nome']}*\n\n{get_barra_hp(ini['hp'], ini['max_hp'])}\n⚔️ ATK: {ini['atk']}\n💰 {ini['ouro']}💰 | ✨ {ini['xp']} XP"
+            img = IMAGENS.get(ini["imagem"], IMAGENS["inimigo_lobo"])
+            bot.edit_message_media(InputMediaPhoto(img, caption=texto, parse_mode="Markdown"),
+                                   call.message.chat.id, call.message.id, reply_markup=menu_batalha())
+
+    # FUGIR
+    elif data == "fugir":
+        if "inimigo" in j:
+            if random.random() < 0.5:
+                del j["inimigo"]
+                salvar_jogadores(jogadores)
+                texto = f"🏃 *FUGIU!*\n\n{formatar_status(j)}"
+                bot.edit_message_media(
+                    InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+                    call.message.chat.id, call.message.id, reply_markup=menu_principal())
+            else:
+                ini = j["inimigo"]
+                dano = max(1, ini["atk"] + random.randint(5, 12) - get_def(j))
+                j["hp"] -= dano
+                salvar_jogadores(jogadores)
+                bot.answer_callback_query(call.id, f"❌ Falha! -{dano} HP!", show_alert=True)
+                texto = f"💥 Falhou! {dano} de dano!\n\n{get_barra_hp(ini['hp'], ini['max_hp'])}\n\n{get_barra_hp(j['hp'], j['max_hp'])}"
+                img = IMAGENS.get(ini["imagem"], IMAGENS["inimigo_lobo"])
+                bot.edit_message_media(InputMediaPhoto(img, caption=texto, parse_mode="Markdown"),
+                                       call.message.chat.id, call.message.id, reply_markup=menu_batalha())
+
+    # POÇÃO - CORRIGIDO
+    elif data == "usar_pocao":
+        pocoes = j.get("pocoes", 0)
+        if pocoes > 0 and j.get("hp", 0) < j.get("max_hp", 100):
+            cura = 50
+            j["hp"] = min(j["max_hp"], j["hp"] + cura)
+            j["pocoes"] = pocoes - 1
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, f"💊 +{cura} HP!", show_alert=True)
+            if "inimigo" in j:
+                ini = j["inimigo"]
+                texto = f"💊 *POÇÃO!* +{cura} HP\n\n{get_barra_hp(ini['hp'], ini['max_hp'])}\n\n{get_barra_hp(j['hp'], j['max_hp'])}"
+                img = IMAGENS.get(ini["imagem"], IMAGENS["inimigo_lobo"])
+                bot.edit_message_media(InputMediaPhoto(img, caption=texto, parse_mode="Markdown"),
+                                       call.message.chat.id, call.message.id, reply_markup=menu_batalha())
+            else:
+                texto = formatar_status(j)
+                bot.edit_message_media(
+                    InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+                    call.message.chat.id, call.message.id, reply_markup=menu_principal())
+        else:
+            bot.answer_callback_query(call.id, "❌ Sem poções ou HP cheio!", show_alert=True)
+
+    # SAIR BATALHA
+    elif data == "sair_batalha":
+        if "inimigo" in j:
+            del j["inimigo"]
+            salvar_jogadores(jogadores)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # COMÉRCIO
+    elif data == "comercio":
+        mk = InlineKeyboardMarkup(row_width=2)
+        mk.add(
+            InlineKeyboardButton("🧪 Alquimista", callback_data="alquimista"),
+            InlineKeyboardButton("👑 Loja Real", callback_data="loja_real"),
+            InlineKeyboardButton("🚶 Andarilho", callback_data="andarilho"),
+            InlineKeyboardButton("⚒️ Ferreiro", callback_data="ferreiro"),
+            InlineKeyboardButton("🤝 Trocas", callback_data="trocas"),
+            InlineKeyboardButton("🐾 Petshop", callback_data="petshop"),
+            InlineKeyboardButton("◀️ VOLTAR", callback_data="voltar")
+        )
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["loja"], caption="💰 *COMÉRCIO*", parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data == "alquimista":
+        texto = f"🧪 *ALQUIMISTA*\n💰 Ouro: {j.get('ouro', 0)}\n\n💊 Poção Pequena (30💰) - Cura 50 HP\n💊 Poção Grande (70💰) - Cura 100 HP\n🔮 Poção de Mana (40💰) - Restaura 40 Mana"
+        mk = InlineKeyboardMarkup()
+        mk.add(InlineKeyboardButton("💊 Poção Pequena (30💰)", callback_data="comprar_pocao_pequena"),
+               InlineKeyboardButton("💊 Poção Grande (70💰)", callback_data="comprar_pocao_grande"),
+               InlineKeyboardButton("🔮 Poção Mana (40💰)", callback_data="comprar_pocao_mana"),
+               InlineKeyboardButton("◀️ VOLTAR", callback_data="comercio"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["pocao"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data == "comprar_pocao_pequena":
+        if j.get("ouro", 0) >= 30:
+            j["ouro"] -= 30
+            j["pocoes"] = j.get("pocoes", 0) + 1
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, "💊 Comprou Poção Pequena!", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, "❌ Ouro insuficiente!", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    elif data == "comprar_pocao_grande":
+        if j.get("ouro", 0) >= 70:
+            j["ouro"] -= 70
+            j["pocoes"] = j.get("pocoes", 0) + 2
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, "💊 Comprou Poção Grande (2 poções)!", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, "❌ Ouro insuficiente!", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    elif data == "comprar_pocao_mana":
+        if j.get("ouro", 0) >= 40:
+            j["ouro"] -= 40
+            j["pocoes_mana"] = j.get("pocoes_mana", 0) + 1
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, "🔮 Comprou Poção de Mana!", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, "❌ Ouro insuficiente!", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    elif data == "loja_real":
+        texto = f"👑 *LOJA REAL*\n🎮 Pixels: {j.get('pixels', 0)}\n\n⚔️ Espada de Ferro (200🎮) - ATK+8\n🛡️ Escudo de Ferro (180🎮) - DEF+6\n💍 Anel de CRIT (150🎮) - CRIT+8%\n👑 Coroa Real (500🎮) - HP+50\n⚔️ Espada Lendária (1000🎮) - ATK+20"
+        mk = InlineKeyboardMarkup(row_width=1)
+        mk.add(
+            InlineKeyboardButton("⚔️ Espada (200🎮)", callback_data="comprar_espada"),
+            InlineKeyboardButton("🛡️ Escudo (180🎮)", callback_data="comprar_escudo"),
+            InlineKeyboardButton("💍 Anel (150🎮)", callback_data="comprar_anel"),
+            InlineKeyboardButton("👑 Coroa (500🎮)", callback_data="comprar_coroa"),
+            InlineKeyboardButton("⚔️ Espada Lendária (1000🎮)", callback_data="comprar_espada_lendaria"),
+            InlineKeyboardButton("◀️ VOLTAR", callback_data="comercio")
+        )
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["espada"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data in ["comprar_espada", "comprar_escudo", "comprar_anel"]:
+        if data == "comprar_espada":
+            if j.get("pixels", 0) >= 200 and not j.get("inventario", {}).get("espada", False):
+                j["pixels"] -= 200
+                j["inventario"]["espada"] = True
+                msg = "⚔️ Comprou Espada! ATK+8!"
+            elif j.get("inventario", {}).get("espada", False):
+                bot.answer_callback_query(call.id, "❌ Já tem espada!", show_alert=True)
+                return
+            else:
+                bot.answer_callback_query(call.id, f"❌ Precisa de 200🎮! (Você tem {j.get('pixels', 0)})",
+                                          show_alert=True)
+                return
+        elif data == "comprar_escudo":
+            if j.get("pixels", 0) >= 180 and not j.get("inventario", {}).get("armadura", False):
+                j["pixels"] -= 180
+                j["inventario"]["armadura"] = True
+                msg = "🛡️ Comprou Escudo! DEF+6!"
+            elif j.get("inventario", {}).get("armadura", False):
+                bot.answer_callback_query(call.id, "❌ Já tem escudo!", show_alert=True)
+                return
+            else:
+                bot.answer_callback_query(call.id, f"❌ Precisa de 180🎮! (Você tem {j.get('pixels', 0)})",
+                                          show_alert=True)
+                return
+        else:  # anel
+            if j.get("pixels", 0) >= 150 and not j.get("inventario", {}).get("amuleto", False):
+                j["pixels"] -= 150
+                j["inventario"]["amuleto"] = True
+                msg = "💍 Comprou Anel! CRIT+8%!"
+            elif j.get("inventario", {}).get("amuleto", False):
+                bot.answer_callback_query(call.id, "❌ Já tem anel!", show_alert=True)
+                return
+            else:
+                bot.answer_callback_query(call.id, f"❌ Precisa de 150🎮! (Você tem {j.get('pixels', 0)})",
+                                          show_alert=True)
+                return
+        salvar_jogadores(jogadores)
+        bot.answer_callback_query(call.id, msg, show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    elif data in ["comprar_coroa", "comprar_espada_lendaria"]:
+        if data == "comprar_coroa":
+            if j.get("pixels", 0) >= 500 and not j.get("inventario", {}).get("coroa", False):
+                j["pixels"] -= 500
+                j["inventario"]["coroa"] = True
+                j["max_hp"] += 50
+                j["hp"] += 50
+                msg = "👑 Comprou Coroa Real! HP+50!"
+            elif j.get("inventario", {}).get("coroa", False):
+                bot.answer_callback_query(call.id, "❌ Já tem coroa!", show_alert=True)
+                return
+            else:
+                bot.answer_callback_query(call.id, f"❌ Precisa de 500🎮! (Você tem {j.get('pixels', 0)})",
+                                          show_alert=True)
+                return
+        else:
+            if j.get("pixels", 0) >= 1000 and not j.get("inventario", {}).get("espada_lendaria", False):
+                j["pixels"] -= 1000
+                j["inventario"]["espada_lendaria"] = True
+                j["inventario"]["espada"] = True
+                j["atk_base"] += 12
+                msg = "⚔️ Comprou Espada Lendária! ATK+20!"
+            elif j.get("inventario", {}).get("espada_lendaria", False):
+                bot.answer_callback_query(call.id, "❌ Já tem esta espada!", show_alert=True)
+                return
+            else:
+                bot.answer_callback_query(call.id, f"❌ Precisa de 1000🎮! (Você tem {j.get('pixels', 0)})",
+                                          show_alert=True)
+                return
+        salvar_jogadores(jogadores)
+        bot.answer_callback_query(call.id, msg, show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    elif data == "andarilho":
+        if not j.get("andarilho_comprado", False):
+            item = random.choice(ITENS_ANDARILHO)
+            j["andarilho_item"] = item
+            j["andarilho_comprado"] = True
+            salvar_jogadores(jogadores)
+        else:
+            item = j.get("andarilho_item", ITENS_ANDARILHO[0])
+        texto = f"🚶 *ANDARILHO*\n💰 Ouro: {j.get('ouro', 0)}\n\n✨ {item['nome']} - {item['preco']}💰\n{item['bonus']}"
+        mk = InlineKeyboardMarkup()
+        mk.add(InlineKeyboardButton(f"🛒 Comprar {item['nome']} ({item['preco']}💰)", callback_data="comprar_andarilho"),
+               InlineKeyboardButton("◀️ VOLTAR", callback_data="comercio"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["loja"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data == "comprar_andarilho":
+        item = j.get("andarilho_item", ITENS_ANDARILHO[0])
+        if j.get("ouro", 0) >= item["preco"]:
+            j["ouro"] -= item["preco"]
+            j.setdefault("inventario_items", []).append(item["nome"])
+            j["andarilho_comprado"] = False
+            if "XP" in item["bonus"]:
+                j["xp"] += 50
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, f"✨ Comprou {item['nome']}!", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, "❌ Ouro insuficiente!", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # ========== COMUNIDADE - CORRIGIDO ==========
+    elif data == "comunidade":
+        total_kills = sum(jg.get("kills", 0) for jg in jogadores.values())
+        total_players = len(jogadores)
+        texto = f"👥 *COMUNIDADE VALORANTIS* 👥\n\n📊 *ESTATÍSTICAS GLOBAIS:*\n\n• 👤 Jogadores registrados: {total_players}\n• 🏆 Total de kills: {total_kills}\n• 💀 Total de mortes: {sum(jg.get('derrotas', 0) for jg in jogadores.values())}\n• 🎮 Total de pixels: {sum(jg.get('pixels', 0) for jg in jogadores.values())}\n• ⭐ Total de VIPs: {sum(1 for jg in jogadores.values() if jg.get('vip', {}).get('ativo', False))}\n\n📢 *GRUPO OFICIAL*\n[Junte-se ao nosso grupo do Telegram!](https://t.me/+exemplo)\n\n💬 Use /ajuda para suporte!\n⭐ Siga @Valorantis_bot para novidades!"
+        # Usando a imagem "comunidade" que já está no dicionário IMAGENS
+        try:
+            bot.edit_message_media(InputMediaPhoto(IMAGENS["comunidade"], caption=texto, parse_mode="Markdown",
+                                                   disable_web_page_preview=True),
+                                   call.message.chat.id, call.message.id, reply_markup=menu_principal())
+        except:
+            # Fallback para banner se a imagem comunidade não existir
+            bot.edit_message_media(
+                InputMediaPhoto(IMAGENS["banner"], caption=texto, parse_mode="Markdown", disable_web_page_preview=True),
+                call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # FERREIRO
+    elif data == "ferreiro":
+        if j["lvl"] >= 5:
+            texto = f"⚒️ *FERREIRO*\n💰 Ouro: {j.get('ouro', 0)}\n\n⚔️ Espada de Aço (300💰) - ATK+12 (Nv.5)\n🛡️ Escudo Pesado (250💰) - DEF+10 (Nv.5)\n⚔️ Espada de Titânio (800💰) - ATK+25 (Nv.15)\n🛡️ Escudo Épico (600💰) - DEF+20 (Nv.15)\n💍 Anel do Dragão (1000💰) - CRIT+20 (Nv.20)"
+            mk = InlineKeyboardMarkup()
+            mk.add(InlineKeyboardButton("⚔️ Espada Aço (300💰)", callback_data="comprar_espada_aco"),
+                   InlineKeyboardButton("🛡️ Escudo Pesado (250💰)", callback_data="comprar_escudo_pesado"),
+                   InlineKeyboardButton("⚔️ Espada Titânio (800💰)", callback_data="comprar_espada_titanio"),
+                   InlineKeyboardButton("🛡️ Escudo Épico (600💰)", callback_data="comprar_escudo_epico"),
+                   InlineKeyboardButton("💍 Anel Dragão (1000💰)", callback_data="comprar_anel_dragao"),
+                   InlineKeyboardButton("◀️ VOLTAR", callback_data="comercio"))
+        else:
+            texto = f"⚒️ *FERREIRO*\n🔒 Nível 5 necessário! (Você é Nv.{j['lvl']})"
+            mk = InlineKeyboardMarkup()
+            mk.add(InlineKeyboardButton("◀️ VOLTAR", callback_data="comercio"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["espada"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data in ["comprar_espada_aco", "comprar_escudo_pesado", "comprar_espada_titanio", "comprar_escudo_epico",
+                  "comprar_anel_dragao"]:
+        itens = {
+            "comprar_espada_aco": {"preco": 300, "chave": "espada_aco", "atk": 4,
+                                   "msg": "⚔️ Comprou Espada de Aço! ATK+12!"},
+            "comprar_escudo_pesado": {"preco": 250, "chave": "escudo_pesado", "def": 4,
+                                      "msg": "🛡️ Comprou Escudo Pesado! DEF+10!"},
+            "comprar_espada_titanio": {"preco": 800, "chave": "espada_titanio", "atk": 13,
+                                       "msg": "⚔️ Comprou Espada de Titânio! ATK+25!"},
+            "comprar_escudo_epico": {"preco": 600, "chave": "escudo_epico", "def": 14,
+                                     "msg": "🛡️ Comprou Escudo Épico! DEF+20!"},
+            "comprar_anel_dragao": {"preco": 1000, "chave": "anel_dragao", "crit": 12,
+                                    "msg": "💍 Comprou Anel do Dragão! CRIT+20!"}
+        }
+        item = itens[data]
+        if j.get("ouro", 0) >= item["preco"] and not j.get("inventario", {}).get(item["chave"], False):
+            j["ouro"] -= item["preco"]
+            j["inventario"][item["chave"]] = True
+            if "atk" in item:
+                j["inventario"]["espada"] = True
+                j["atk_base"] += item["atk"]
+            elif "def" in item:
+                j["inventario"]["armadura"] = True
+                j["def_base"] += item["def"]
+            elif "crit" in item:
+                j["inventario"]["amuleto"] = True
+                j["crit_base"] += item["crit"]
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, item["msg"], show_alert=True)
+        elif j.get("inventario", {}).get(item["chave"], False):
+            bot.answer_callback_query(call.id, "❌ Você já tem este item!", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, f"❌ Ouro insuficiente! Precisa de {item['preco']}💰", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    elif data == "trocas":
+        texto = "🤝 *SISTEMA DE TROCAS*\n\n📊 *Mercado de jogadores:*\n\n🔧 Função em desenvolvimento!\nEm breve você poderá trocar itens com outros heróis!\n\n💡 Sugestão: Anuncie no grupo da comunidade o que deseja trocar!"
+        mk = InlineKeyboardMarkup()
+        mk.add(InlineKeyboardButton("👥 Comunidade", callback_data="comunidade"),
+               InlineKeyboardButton("◀️ VOLTAR", callback_data="comercio"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["loja"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data == "petshop":
+        texto = "🐾 *PETSHP*\n\n🔧 Em desenvolvimento! Em breve você poderá ter mascotes que dão bônus especiais!"
+        mk = InlineKeyboardMarkup()
+        mk.add(InlineKeyboardButton("◀️ VOLTAR", callback_data="comercio"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["loja"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    # ARENA
+    elif data == "arena":
+        texto = f"🏆 *ARENA PvP*\n\n🏆 Honra: {j.get('honra', 0)}\n⚔️ Vitórias: {j.get('vitorias', 0)}\n💀 Derrotas: {j.get('derrotas', 0)}\n⚡ AC hoje: {j.get('ac_diario', 0)}/300\n\n⭐ Vitória: +15 Honra, +10 AC, 50💰\n💀 Derrota: -5 Honra, +5 AC, 20💰"
+        mk = InlineKeyboardMarkup()
+        mk.add(InlineKeyboardButton("⚔️ Buscar Adversário", callback_data="buscar_adversario"),
+               InlineKeyboardButton("🏆 Ranking Arena", callback_data="ranking_arena"),
+               InlineKeyboardButton("🛒 Loja Arena (AC)", callback_data="loja_arena"),
+               InlineKeyboardButton("◀️ VOLTAR", callback_data="voltar"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["arena"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data == "buscar_adversario":
+        if j["energia"] < 2:
+            bot.answer_callback_query(call.id, "❌ Precisa de 2⚡!", show_alert=True)
+            return
+        j["energia"] -= 2
+        forca = get_atk(j) + get_def(j) + get_crit(j) + random.randint(1, 50)
+        if forca >= 60:
+            j["honra"] = j.get("honra", 0) + 15
+            j["vitorias"] = j.get("vitorias", 0) + 1
+            j["ac_diario"] = j.get("ac_diario", 0) + 10
+            j["ouro"] = j.get("ouro", 0) + 50
+            msg = "🏆 VITÓRIA! +15 Honra, +10 AC, +50💰"
+        else:
+            j["honra"] = max(0, j.get("honra", 0) - 5)
+            j["derrotas"] = j.get("derrotas", 0) + 1
+            j["ac_diario"] = j.get("ac_diario", 0) + 5
+            j["ouro"] = j.get("ouro", 0) + 20
+            msg = "💀 DERROTA! -5 Honra, +5 AC, +20💰"
+        salvar_jogadores(jogadores)
+        bot.answer_callback_query(call.id, msg, show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    elif data == "ranking_arena":
+        rank = sorted(jogadores.items(), key=lambda x: x[1].get("honra", 0), reverse=True)[:10]
+        texto = "🏆 *RANKING ARENA*\n\n"
+        for i, (_, jg) in enumerate(rank, 1):
+            medalha = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}º")
+            texto += f"{medalha} {jg['nome']} - {jg.get('honra', 0)} honra ({jg.get('vitorias', 0)}V/{jg.get('derrotas', 0)}D)\n"
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["arena"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    elif data == "loja_arena":
+        ac = j.get("ac_diario", 0)
+        texto = f"🛒 *LOJA DA ARENA*\n\n💰 Seus AC: {ac}\n\n🎽 Capa da Arena - 50 AC (+5 DEF)\n⚔️ Espada Gladiador - 100 AC (+10 ATK)\n✨ Poção da Arena - 20 AC (Cura 100 HP)"
+        mk = InlineKeyboardMarkup()
+        mk.add(InlineKeyboardButton("🎽 Capa Arena (50 AC)", callback_data="comprar_capa_arena"),
+               InlineKeyboardButton("⚔️ Espada Gladiador (100 AC)", callback_data="comprar_espada_arena"),
+               InlineKeyboardButton("✨ Poção Arena (20 AC)", callback_data="comprar_pocao_arena"),
+               InlineKeyboardButton("◀️ VOLTAR", callback_data="arena"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["arena"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data in ["comprar_capa_arena", "comprar_espada_arena", "comprar_pocao_arena"]:
+        ac = j.get("ac_diario", 0)
+        if data == "comprar_capa_arena" and ac >= 50:
+            j["ac_diario"] -= 50
+            j["def_base"] += 5
+            msg = "🎽 Comprou Capa da Arena! DEF +5!"
+        elif data == "comprar_espada_arena" and ac >= 100:
+            j["ac_diario"] -= 100
+            j["atk_base"] += 10
+            msg = "⚔️ Comprou Espada Gladiador! ATK +10!"
+        elif data == "comprar_pocao_arena" and ac >= 20:
+            j["ac_diario"] -= 20
+            j["pocoes"] = j.get("pocoes", 0) + 1
+            msg = "✨ Comprou Poção da Arena!"
+        else:
+            bot.answer_callback_query(call.id, f"❌ AC insuficiente! Você tem {ac} AC", show_alert=True)
+            return
+        salvar_jogadores(jogadores)
+        bot.answer_callback_query(call.id, msg, show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # EVENTOS
+    elif data == "eventos":
+        evento = EVENTOS["invasao"]
+        texto = f"🎉 *INVASÃO ATIVA!*\n\n✨ +{evento['bonus_xp']}% XP\n💰 +{evento['bonus_ouro']}% Ouro\n\n🐉 *BOSS SEMANAL*\nHP: {EVENTOS['boss']['boss_atual']}/{EVENTOS['boss']['boss_hp']}\n\n🌟 *PRÓXIMOS EVENTOS:*\n• Torneio Arena - Fim de semana\n• Caça ao Tesouro - Terça/Quinta"
+        mk = InlineKeyboardMarkup()
+        mk.add(InlineKeyboardButton("⚔️ Participar da Invasão", callback_data="participar_invasao"),
+               InlineKeyboardButton("🐉 Atacar Boss", callback_data="atacar_boss"),
+               InlineKeyboardButton("◀️ VOLTAR", callback_data="voltar"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["evento"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data == "participar_invasao":
+        if j["energia"] >= 1:
+            j["energia"] -= 1
+            xp = random.randint(30, 60)
+            ouro = random.randint(20, 50)
+            xp = int(xp * 1.5)
+            ouro = int(ouro * 1.5)
+            j["xp"] += xp
+            j["ouro"] = j.get("ouro", 0) + ouro
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, f"⚔️ Participou da invasão!\n✨ +{xp} XP\n💰 +{ouro}💰", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, "❌ Energia insuficiente!", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    elif data == "atacar_boss":
+        if j["energia"] >= 2:
+            j["energia"] -= 2
+            dano = get_atk(j) + random.randint(10, 30)
+            EVENTOS["boss"]["boss_atual"] = max(0, EVENTOS["boss"]["boss_atual"] - dano)
+            j["xp"] += dano // 2
+            j["ouro"] = j.get("ouro", 0) + dano // 3
+            if EVENTOS["boss"]["boss_atual"] <= 0:
+                EVENTOS["boss"]["boss_atual"] = EVENTOS["boss"]["boss_hp"]
+                bot.answer_callback_query(call.id, f"🎉 BOSS DERROTADO! Você ganhou +200💰 de bônus!", show_alert=True)
+                j["ouro"] = j.get("ouro", 0) + 200
+            else:
+                bot.answer_callback_query(call.id, f"⚔️ Causou {dano} de dano ao Boss!", show_alert=True)
+            salvar_jogadores(jogadores)
+        else:
+            bot.answer_callback_query(call.id, "❌ Precisa de 2⚡!", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # MASMORRA
+    elif data == "masmorra":
+        texto = f"⛓️ *MASMORRA*\n\n🗝️ Chaves: {j.get('chaves_masmorra', 0)}\n\n🏰 *Andares disponíveis:*\n• Andar 1 (1🗝️) - Recompensa: 50💰, 40✨\n• Andar 2 (1🗝️) - Recompensa: 100💰, 80✨\n• Andar 3 (1🗝️) - Recompensa: 150💰, 120✨\n• Andar 4 (1🗝️) - Recompensa: 200💰, 160✨\n• Andar 5 (1🗝️) - Recompensa: 250💰, 200✨"
+        mk = InlineKeyboardMarkup()
+        mk.add(InlineKeyboardButton("🏰 Entrar na Masmorra (1🗝️)", callback_data="entrar_masmorra"),
+               InlineKeyboardButton("📖 Guia da Masmorra", callback_data="guia_masmorra"),
+               InlineKeyboardButton("◀️ VOLTAR", callback_data="voltar"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["mapa_masmorra"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data == "entrar_masmorra":
+        if j.get("chaves_masmorra", 0) >= 1:
+            j["chaves_masmorra"] -= 1
+            andar = random.randint(1, 5)
+            recompensa = andar * 50
+            xp = andar * 40
+            j["ouro"] = j.get("ouro", 0) + recompensa
+            j["xp"] += xp
+            if random.random() < 0.3:
+                j["chaves_masmorra"] = j.get("chaves_masmorra", 0) + 1
+                drop = "\n🗝️ +1 Chave!"
+            else:
+                drop = ""
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, f"🏰 Masmorra Andar {andar}!\n💰 +{recompensa}💰\n✨ +{xp} XP{drop}",
+                                      show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, "❌ Sem chaves! (Compre na loja)", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    elif data == "guia_masmorra":
+        texto = "📖 *GUIA DA MASMORRA*\n\n• Cada andar tem inimigos mais fortes\n• Use Chaves de Masmorra para entrar\n• Quanto maior o andar, maior a recompensa\n• Bônus de 30% de chance de encontrar uma chave extra!"
+        bot.answer_callback_query(call.id, texto, show_alert=True)
+
+    # ATIVIDADES (Login Diário e Missões)
+    elif data == "atividades":
+        recompensa = [50, 75, 100, 150, 200, 300, 500][min(j.get("login_diario", 1) - 1, 6)]
+        texto = f"📋 *ATIVIDADES DIÁRIAS*\n\n📅 *LOGIN DIÁRIO* — Dia {j.get('login_diario', 1)}/7\n💰 Recompensa do dia: {recompensa}💰\n\n🎁 *Recompensa disponível!* (Clique para resgatar)\n\n📋 *MISSÕES DIÁRIAS*\n\n⚔️ Matar 15 monstros: {j.get('kills_diario', 0)}/15 | 80💰 40✨\n⭐ Matar 6 monstros raros: {j.get('missoes_diarias', {}).get('matar_raro', 0)}/6 | 100💰 60✨\n✨ Ganhar 70 XP: {j.get('xp_diario', 0)}/70 | 50💰 40✨\n\n✨ *Complete todas* para bônus de +150💰 +50✨"
+        mk = InlineKeyboardMarkup()
+        mk.add(InlineKeyboardButton("🎁 Resgatar Login Diário", callback_data="resgatar_login"),
+               InlineKeyboardButton("✨ Resgatar Missões", callback_data="resgatar_missoes"),
+               InlineKeyboardButton("◀️ VOLTAR", callback_data="voltar"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["banner"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data == "resgatar_login":
+        if not j.get("login_recebido", False):
+            recompensa = [50, 75, 100, 150, 200, 300, 500][min(j.get("login_diario", 1) - 1, 6)]
+            j["ouro"] = j.get("ouro", 0) + recompensa
+            j["login_recebido"] = True
+            j["login_diario"] = min(j.get("login_diario", 1) + 1, 7)
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, f"🎁 +{recompensa}💰!", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, "❌ Já resgatou hoje!", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    elif data == "resgatar_missoes":
+        total = 0
+        if j.get("kills_diario", 0) >= 15:
+            j["kills_diario"] = 0
+            j["ouro"] = j.get("ouro", 0) + 80
+            j["xp"] += 40
+            total += 1
+        if j.get("missoes_diarias", {}).get("matar_raro", 0) >= 6:
+            j["missoes_diarias"]["matar_raro"] = 0
+            j["ouro"] = j.get("ouro", 0) + 100
+            j["xp"] += 60
+            total += 1
+        if j.get("xp_diario", 0) >= 70:
+            j["xp_diario"] = 0
+            j["ouro"] = j.get("ouro", 0) + 50
+            j["xp"] += 40
+            total += 1
+        if total == 3:
+            j["ouro"] = j.get("ouro", 0) + 150
+            j["xp"] += 50
+        if total > 0:
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, f"🎁 Resgatou {total} missões!", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, "❌ Nenhuma missão completa ainda!", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # RANKING
+    elif data == "ranking":
+        rank = sorted(jogadores.items(), key=lambda x: x[1]["lvl"], reverse=True)[:10]
+        texto = "🏆 *RANKING DOS HERÓIS* 🏆\n\n"
+        for i, (_, jg) in enumerate(rank, 1):
+            medalha = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}º")
+            classe_icon = CLASSES.get(jg.get("classe", "guerreiro"), CLASSES["guerreiro"])["nome"].split()[0]
+            texto += f"{medalha} {classe_icon} *{jg['nome']}* - Nv.{jg['lvl']} ({jg['kills']} kills)\n"
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["banner"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # GUILDA
+    elif data == "guilda":
+        texto = f"🏰 *GUILDAS*\n\n💰 Seu ouro: {j.get('ouro', 0)}\n\n🏆 *GUILDAS DISPONÍVEIS:*\n\n🐉 **Dragões de Fogo** (1000💰)\n   Bônus: +5 ATK, +5 DEF\n   Membros: 1250\n\n🐺 **Lobos do Norte** (800💰)\n   Bônus: +3 ATK, +7 DEF\n   Membros: 890\n\n🦅 **Águias Reais** (1200💰)\n   Bônus: +6 ATK, +4 DEF\n   Membros: 567"
+        mk = InlineKeyboardMarkup(row_width=1)
+        mk.add(InlineKeyboardButton("🐉 Entrar Dragões (1000💰)", callback_data="entrar_guilda_1"),
+               InlineKeyboardButton("🐺 Entrar Lobos (800💰)", callback_data="entrar_guilda_2"),
+               InlineKeyboardButton("🦅 Entrar Águias (1200💰)", callback_data="entrar_guilda_3"),
+               InlineKeyboardButton("◀️ VOLTAR", callback_data="voltar"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["guilda_img"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data.startswith("entrar_guilda_"):
+        custos = {1: 1000, 2: 800, 3: 1200}
+        nomes = {1: "Dragões de Fogo", 2: "Lobos do Norte", 3: "Águias Reais"}
+        bonuses = {1: {"atk": 5, "def": 5}, 2: {"atk": 3, "def": 7}, 3: {"atk": 6, "def": 4}}
+        gid = int(data.split("_")[2])
+        if j.get("ouro", 0) >= custos[gid]:
+            j["ouro"] -= custos[gid]
+            j["guilda"] = nomes[gid]
+            j["atk_base"] += bonuses[gid]["atk"]
+            j["def_base"] += bonuses[gid]["def"]
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id,
+                                      f"✅ Entrou na {nomes[gid]}! +{bonuses[gid]['atk']} ATK, +{bonuses[gid]['def']} DEF!",
+                                      show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, f"❌ Precisa de {custos[gid]}💰!", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # VIP
+    elif data == "vip":
+        vip_ativo = j.get("vip", {}).get("ativo", False)
+        dias_restantes = j.get("vip", {}).get("dias_restantes", 0)
+        texto = f"⭐ *SISTEMA VIP* ⭐\n\n📊 *Status VIP:* {'✅ ATIVO' if vip_ativo else '❌ INATIVO'}\n{'📅 Dias restantes: ' + str(dias_restantes) if vip_ativo else ''}\n\n💎 *Benefícios VIP:*\n• +20% de XP em tudo\n• +20% de Ouro em tudo\n• +5 ATK adicional\n• +3 DEF adicional\n• +5% CRIT adicional\n• +2 AGI adicional\n• 3 poções grátis por dia\n• Energia máxima +10\n\n💰 *Preços:*\n• 1 dia: 500💰\n• 7 dias: 3000💰\n• 30 dias: 10000💰\n\n💎 Seus pixels: {j.get('pixels', 0)}  💰 Ouro: {j.get('ouro', 0)}"
+        mk = InlineKeyboardMarkup()
+        mk.add(InlineKeyboardButton("⭐ 1 dia (500💰)", callback_data="comprar_vip_1"),
+               InlineKeyboardButton("⭐ 7 dias (3000💰)", callback_data="comprar_vip_7"),
+               InlineKeyboardButton("⭐ 30 dias (10000💰)", callback_data="comprar_vip_30"),
+               InlineKeyboardButton("◀️ VOLTAR", callback_data="voltar"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["vip"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data in ["comprar_vip_1", "comprar_vip_7", "comprar_vip_30"]:
+        dias = {"comprar_vip_1": 1, "comprar_vip_7": 7, "comprar_vip_30": 30}
+        precos = {"comprar_vip_1": 500, "comprar_vip_7": 3000, "comprar_vip_30": 10000}
+        dia = dias[data]
+        preco = precos[data]
+        if j.get("ouro", 0) >= preco:
+            j["ouro"] -= preco
+            if j.get("vip", {}).get("ativo", False):
+                j["vip"]["dias_restantes"] += dia
+            else:
+                j["vip"] = {"ativo": True, "dias_restantes": dia}
+            salvar_jogadores(jogadores)
+            bot.answer_callback_query(call.id, f"⭐ VIP ativado por {dia} dias!", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, f"❌ Ouro insuficiente! Precisa de {preco}💰", show_alert=True)
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # RECRUTAR
+    elif data == "recrutar":
+        link = f"https://t.me/Valorantis_bot?start=ref_{uid}"
+        texto = f"👥 *RECRUTAR AMIGOS*\n\n🔗 Seu link exclusivo:\n`{link}`\n\n🎁 *Bônus dos Recrutas:*\n\n*Quando um amigo entra pelo seu link:*\n• Ele recebe: 100💰 + 2💊\n• Você recebe: 200💰 + 5💊 (após amigo atingir Nv.3)\n\n*Bônus por marcos do recruta:*\n• Nv.5: 250💰 + 5💊\n• Nv.10: 500💰 + 2🎮 + 1🗝️\n• Nv.20: 750💰 + 5🎮 + 1⚡\n• 50 Abates: 200💰\n• 200 Abates: 400💰 + 1🎮\n\n👥 Amigos recrutados: {len(j.get('recrutados', []))}"
+        mk = InlineKeyboardMarkup()
+        mk.add(InlineKeyboardButton("📋 Copiar Link", callback_data="copiar_link"),
+               InlineKeyboardButton("◀️ VOLTAR", callback_data="voltar"))
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["recrutar_img"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=mk)
+
+    elif data == "copiar_link":
+        link = f"https://t.me/Valorantis_bot?start=ref_{uid}"
+        bot.answer_callback_query(call.id, f"✅ Link copiado! Compartilhe com seus amigos!", show_alert=True)
+
+    # CÓDIGOS
+    elif data == "codigos":
+        texto = "🎁 *CÓDIGOS PROMOCIONAIS* 🎁\n\nUse os comandos abaixo para resgatar códigos:\n\n`/resgatar VALORANTIS100` - 100 ouro + 50 XP\n`/resgatar BOASVINDAS` - 50 ouro + 1 poção\n`/resgatar MAGO2024` - 200 ouro + 100 XP\n\n💡 *Novos códigos serão lançados em eventos especiais!*"
+        bot.edit_message_media(InputMediaPhoto(IMAGENS["codigo"], caption=texto, parse_mode="Markdown"),
+                               call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+    # COMUNIDADE - JÁ FOI CORRIGIDO ACIMA
+
+    # SOM
+    elif data == "som":
+        j["som"] = not j.get("som", True)
+        salvar_jogadores(jogadores)
+        bot.answer_callback_query(call.id, f"🔊 Som {'ativado' if j['som'] else 'desativado'}!", show_alert=True)
+
+    # VOLTAR
+    elif data == "voltar":
+        texto = formatar_status(j)
+        bot.edit_message_media(
+            InputMediaPhoto(IMAGENS[j.get("classe", "guerreiro")], caption=texto, parse_mode="Markdown"),
+            call.message.chat.id, call.message.id, reply_markup=menu_principal())
+
+
+@bot.message_handler(commands=['resgatar'])
+def resgatar(msg):
+    uid = str(msg.chat.id)
+    dados = carregar_jogadores()
+    if uid not in dados:
+        msg.reply("❌ Use /start primeiro!")
+        return
+    partes = msg.text.split()
+    if len(partes) < 2:
+        msg.reply("🎁 *Use: /resgatar CODIGO*\nCódigos disponíveis: VALORANTIS100, BOASVINDAS, MAGO2024",
+                  parse_mode="Markdown")
+        return
+    codigo = partes[1].upper()
+    j = dados[uid]
+    codigos_validos = {"VALORANTIS100": {"ouro": 100, "xp": 50, "pocao": 0},
+                       "BOASVINDAS": {"ouro": 50, "xp": 0, "pocao": 1},
+                       "MAGO2024": {"ouro": 200, "xp": 100, "pocao": 0}}
+    if codigo in codigos_validos:
+        if codigo in j.get("codigos_usados", []):
+            msg.reply("❌ Você já usou este código!", parse_mode="Markdown")
+            return
+        recompensa = codigos_validos[codigo]
+        j["ouro"] = j.get("ouro", 0) + recompensa["ouro"]
+        j["xp"] += recompensa["xp"]
+        j["pocoes"] = j.get("pocoes", 0) + recompensa["pocao"]
+        j.setdefault("codigos_usados", []).append(codigo)
+        salvar_jogadores(dados)
+        msg.reply(
+            f"✅ *Código resgatado!*\n💰 +{recompensa['ouro']} ouro\n✨ +{recompensa['xp']} XP\n💊 +{recompensa['pocao']} poção",
+            parse_mode="Markdown")
+    else:
+        msg.reply("❌ Código inválido! Tente: VALORANTIS100, BOASVINDAS, MAGO2024", parse_mode="Markdown")
+
+
+@bot.message_handler(commands=['ranking'])
+def ranking_cmd(msg):
+    dados = carregar_jogadores()
+    rank = sorted(dados.items(), key=lambda x: x[1]["lvl"], reverse=True)[:10]
+    texto = "🏆 *RANKING DOS HERÓIS* 🏆\n\n"
+    for i, (_, jg) in enumerate(rank, 1):
+        medalha = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}º")
+        classe_icon = CLASSES.get(jg.get("classe", "guerreiro"), CLASSES["guerreiro"])["nome"].split()[0]
+        texto += f"{medalha} {classe_icon} *{jg['nome']}* - Nv.{jg['lvl']} ({jg['kills']} kills)\n"
+    msg.reply(texto, parse_mode="Markdown")
+
+
+@bot.message_handler(commands=['ajuda'])
+def ajuda(msg):
+    texto = """
+🆘 *COMANDOS DO VALORANTIS BOT* 🆘
+
+/start - Iniciar o jogo
+/ranking - Ver ranking global
+/resgatar CODIGO - Resgatar código promocional
+/ajuda - Mostrar esta mensagem
+
+📱 *Dúvidas?* Acesse nossa comunidade!
+    """
+    msg.reply(texto, parse_mode="Markdown")
+
+
+# Thread para verificar VIP diariamente
+def verificar_vip():
+    while True:
+        time.sleep(86400)  # Verifica a cada 24 horas
+        dados = carregar_jogadores()
+        alterado = False
+        for uid, j in dados.items():
+            if j.get("vip", {}).get("ativo", False):
+                dias = j["vip"]["dias_restantes"]
+                if dias <= 1:
+                    j["vip"]["ativo"] = False
+                    j["vip"]["dias_restantes"] = 0
+                else:
+                    j["vip"]["dias_restantes"] = dias - 1
+                alterado = True
+        if alterado:
+            salvar_jogadores(dados)
+
+
+thread = threading.Thread(target=verificar_vip, daemon=True)
+thread.start()
+
+print("✅ VALORANTIS BOT 3.0 COMPLETO!")
+print("📱 Envie /start no Telegram: @Valorantis_bot")
+print(f"🎮 {len(CLASSES)} classes | 🗺️ {len(MAPAS)} mapas | 👹 Inimigos por mapa")
+print("⭐ Sistema VIP | 🏆 Arena | 🎉 Eventos | 🎭 Conquistas | 🔮 Magias")
+# --- SISTEMA KEEP-ALIVE PARA O RENDER ---
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot Valorantis Online!"
+
+def run():
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+if __name__ == "__main__":
+    keep_alive()  # Inicia o Flask em uma thread separada
+    print("Servidor de monitoramento iniciado!")
+    print("Bot Valorantis está rodando...")
+    bot.infinity_polling() # Inicia o bot do Telegram
+
+
+
+
+
+
+
+
+
+
+
